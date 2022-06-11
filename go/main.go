@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -102,6 +103,13 @@ func init() {
 	flag.StringVar(&sammytype, "type", "", "The type to give to your new Sammy.")
 	flag.Parse()
 
+	// if this is a Function context, skip the check, parameters will be set from Main argument
+	if os.Getenv("__OW_ACTIVATION_ID") == "" {
+		check()
+	}
+}
+
+func check() {
 	if sammyname == "" {
 		log.Fatal("Sammy has to have a name")
 	}
@@ -110,7 +118,12 @@ func init() {
 	}
 }
 
-func main() {
+// replace 'main' with 'Main' and read arguments from 'args' map and check for validity
+func Main(args map[string]interface{}) map[string]interface{} {
+	sammyname, _ = args["sammyname"].(string)
+	sammytype, _ = args["sammytype"].(string)
+	check()
+
 	var (
 		c = http.DefaultClient
 		r = &sharksRequest{
@@ -151,4 +164,9 @@ func main() {
 		log.Fatalf("An error occurred: Message: %s, Errors: %v", R.Message, R.Errors)
 	}
 	log.Println(R.Message)
+
+	// if we got to this point, the shark was created successfully, else check logs
+	msg := make(map[string]interface{})
+	msg["body"] = "created " + sammyname + "!"
+	return msg
 }
